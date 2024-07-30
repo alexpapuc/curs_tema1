@@ -1,5 +1,7 @@
-1. Descriere aplicatie
-"""
+# Uber Statistics
+
+## Introducere
+
 Aplicatia va genera statistici despre cursele unui utilizator de Uber.
 Aplicatia va primi un fisier, din linia de comanda, pe care il va procesa si pe baza informatiilor va afisa,
 in terminal, diferite informatii:
@@ -21,14 +23,26 @@ in terminal, diferite informatii:
 -   Cea mai scurta cursa (in minute)
 -   Cea mai lunga cursa (in minute)
 
-"""
+## Instalare
 
+Cloneaza repozitory-ul:
 
-2. Instalare
-  - cloneaza repozitory-ul  https://github.com/alexpapuc/curs_tema1.git
-  - navigheaza in folderul proiectului creaza un virtual environment si instaleaza dependintele
+```bash
+git clone https://github.com/alexpapuc/curs_tema1.git
+```
+Navigheaza in folderul proiectului, creaza un virtual environment si instaleaza dependintele:
 
-3. Utilizare
--  deschide un terminal de comanda
--  activeaza virtual environment-ul creat la pasul anterior
--  cu virtual environment activat introdu comanda: py uber_trips.py trips_data.csv
+```bash
+cd cursa_tema1_alex
+python -m venv venv
+pip install -r requirements.txt
+```
+
+## Utilizare
+-  Deschide un terminal de comanda
+-  Activeaza virtual environment-ul creat la pasul anterior
+-  Cu virtual environment activat introdu comanda:
+
+```bash
+python uber_trips.py trips_data.csv
+```

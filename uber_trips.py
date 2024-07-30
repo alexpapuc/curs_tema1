@@ -1,31 +1,9 @@
-"""
-Aplicatia va genera statistici despre cursele unui utilizator de Uber.
-Aplicatia va primi un fisier, din linia de comanda, pe care il va procesa si pe baza informatiilor va afisa,
-in terminal, diferite informatii:
--   Total bani cheltuiti
--   Total curse (COMPLETED, CANCELED)
--   Total curse per an
--   Total curse per oras
--   Total curse per luna
--   Distanta totala (in km)
--   Curse per produs
-    -   UberX
-    -   Comfort
-    -   Black
--   Perioada totala petrecuta in curse
-    -   Secunde
-    -   Minute
-    -   Ore
-    -   Zi
--   Cea mai scurta cursa (in minute)
--   Cea mai lunga cursa (in minute)
-"""
-
 import sys
 import pandas as pd
 from datetime import datetime, timedelta
 
-class CitesteCSV:
+
+class CSV:
     def __init__(self):
         self.file_path = sys.argv[1]
         self.dataframe = None
@@ -37,6 +15,7 @@ class CitesteCSV:
         except Exception as e:
             print(f"Error reading CSV file: {e}")
         return self.dataframe
+
 
 class CurrencyConverter:
     def __init__(self, dataframe, val_eur_to_ron, val_gbp_to_ron):
@@ -228,6 +207,7 @@ class Statistica:
     def cea_mai_lunga_cursa(self):
         # print(max(self.timpi_curse()))
         print(f'Cea mai scurta cursa a durat {self.format_timedelta(max(self.timpi_curse()))[0]} minute si {self.format_timedelta(max(self.timpi_curse()))[1]} secunde')
+
 
 if __name__ =='__main__':
     #fisier = 'trips_data.csv'
