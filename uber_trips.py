@@ -1,6 +1,9 @@
 import sys
-import pandas as pd
 from datetime import datetime, timedelta
+
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
 
 
 class CitesteCSV:
@@ -18,26 +21,44 @@ class CitesteCSV:
 
 
 class CurrencyConverter:
-    def __init__(self, dataframe, val_eur_to_ron, val_gbp_to_ron):
+
+    def __init__(self, dataframe):
         self.dataframe = dataframe
-        self.val_eur_to_ron = val_eur_to_ron
-        self.val_gbp_to_ron = val_gbp_to_ron
+        self.currencies = {"EUR": 4.9763, "GBP": 5.85, "RON": 1}
+        self.get_current_exchanges()
+
+    def get_current_exchanges(self):
+        # Get content of cursbnr
+        response = requests.get("https://www.cursbnr.ro/")
+        if response.status_code != 200:
+            return
+        # Parse the response into a BeautifulSoup object
+        soup = BeautifulSoup(response.text, "html.parser")
+        table = soup.find("table", {"id": "table-currencies"})
+        table_rows = table.find_all("tr")
+        for table_row in table_rows[1:]:
+            table_datas = table_row.find_all("td")
+            currency = table_datas[0].text
+            value = float(table_datas[2].text)
+            self.currencies.update({currency: value})
 
     def convert_to_ron(self):
         def converteste_in_ron(linie_df):
             try:
-                if linie_df['Fare Currency'] == 'EUR':
-                    return float(linie_df['Fare Amount']) * self.val_eur_to_ron
-                elif linie_df['Fare Currency'] == 'GBP':
-                    return float(linie_df['Fare Amount']) * self.val_gbp_to_ron
-                else:
-                    return float(linie_df['Fare Amount'])
+                return self.currencies[linie_df["Fare Currency"]] * float(
+                    linie_df["Fare Amount"]
+                )
             except ValueError:
-                print(f"Valoarea {linie_df['Fare Amount']} nu este un numar. Va fi inlocuit cu 0!")
+                print(
+                    f"Valoarea {linie_df['Fare Amount']} nu este un numar. Va fi inlocuit cu 0!"
+                )
                 return 0
 
-        self.dataframe['Fare Amount RON'] = self.dataframe.apply(converteste_in_ron, axis=1)
+        self.dataframe["Fare Amount RON"] = self.dataframe.apply(
+            converteste_in_ron, axis=1
+        )
         return self.dataframe
+
 
 class Statistica:
     def __init__(self, dataframe):
@@ -47,18 +68,18 @@ class Statistica:
         print(self.dataframe.columns)
 
     def total_bani_cheltuiti(self):
-        total_cheltuit = self.dataframe['Fare Amount RON'].sum()
-        print(f'Total bani cheltuiti: {total_cheltuit:.2f} Ron')
+        total_cheltuit = self.dataframe["Fare Amount RON"].sum()
+        print(f"Total bani cheltuiti: {total_cheltuit:.2f} Ron")
 
     def total_curse(self):
-        tip_curse = list(set(self.dataframe['Trip or Order Status']))
-        statusuri_curse = list(self.dataframe['Trip or Order Status'])
+        tip_curse = list(set(self.dataframe["Trip or Order Status"]))
+        statusuri_curse = list(self.dataframe["Trip or Order Status"])
         total_curse = len(statusuri_curse)
-        print(f'Total curse: {total_curse}')
+        print(f"Total curse: {total_curse}")
 
         for tip_cursa in tip_curse:
             total_tip_curse = statusuri_curse.count(tip_cursa)
-            print(f'Curse {tip_cursa}: {total_tip_curse}')
+            print(f"Curse {tip_cursa}: {total_tip_curse}")
 
     def total_curse_pe_an(self):
         """
@@ -67,102 +88,109 @@ class Statistica:
         extragem doar anii din string
         """
         # extrag data/ora de incheiere a fiecarei curse 'COMPLETED'
-        status_curse = list(self.dataframe['Trip or Order Status'])
-        date_curse_terminate = list(self.dataframe['Dropoff Time'])
+        status_curse = list(self.dataframe["Trip or Order Status"])
+        date_curse_terminate = list(self.dataframe["Dropoff Time"])
 
         ani_curse = []
         for i in range(len(status_curse)):
-            if status_curse[i] == 'COMPLETED':
-                ani_curse.append(date_curse_terminate[i].split('-')[0])
+            if status_curse[i] == "COMPLETED":
+                ani_curse.append(date_curse_terminate[i].split("-")[0])
         ani_unici = list(set(ani_curse))
 
         for an in ani_unici:
-            print(f'In anul {an} au fost efectuate {ani_curse.count(an)} curse complete')
+            print(
+                f"In anul {an} au fost efectuate {ani_curse.count(an)} curse complete"
+            )
 
     def total_curse_pe_oras(self):
         """
         Afiseaza in terminal cate curse complete au fost efectuate in fiecare oras
         """
-        status_curse = list(self.dataframe['Trip or Order Status'])
-        orase = list(self.dataframe['City'])
+        status_curse = list(self.dataframe["Trip or Order Status"])
+        orase = list(self.dataframe["City"])
 
         orase_curse_complete = []
         for i in range(len(status_curse)):
-            if status_curse[i] == 'COMPLETED':
+            if status_curse[i] == "COMPLETED":
                 orase_curse_complete.append(orase[i])
 
         orase_unice = list(set(orase_curse_complete))
 
         for oras in orase_unice:
-            print(f'In {oras} au fost efectuate {orase_curse_complete.count(oras)} curse')
+            print(
+                f"In {oras} au fost efectuate {orase_curse_complete.count(oras)} curse"
+            )
 
     def total_curse_pe_luna(self):
         """
         Afiseaza in terminal cate curse complete au fost efectuate in fiecare luna din fiecare oras
         """
-        status_curse = list(self.dataframe['Trip or Order Status'])
-        date_curse_terminate = list(self.dataframe['Dropoff Time'])
+        status_curse = list(self.dataframe["Trip or Order Status"])
+        date_curse_terminate = list(self.dataframe["Dropoff Time"])
 
         date_an_luna = []
         # adaugam anii, lunile in o lista de tupluri similar cu [('2022', '08'), ('2023', '01'), ('2022', '06')]
         # la o lista de tupluri putem aplica set ca sa obtinem valori unice
         for i in range(len(status_curse)):
-            if status_curse[i] == 'COMPLETED':
-                date_an_luna.append(tuple(date_curse_terminate[i].split('-')[:2]))
+            if status_curse[i] == "COMPLETED":
+                date_an_luna.append(tuple(date_curse_terminate[i].split("-")[:2]))
 
         date_an_luna_unice = list(set(date_an_luna))
-        #sortam lista de tupluri in functie de an si luna
+        # sortam lista de tupluri in functie de an si luna
         date_an_luna_unice.sort(key=lambda x: (x[0], x[1]))
         for an_luna in date_an_luna_unice:
-            print(f'In anul {an_luna[0]} luna {an_luna[1]} au fost efectuate {date_an_luna.count(an_luna)} curse.')
+            print(
+                f"In anul {an_luna[0]} luna {an_luna[1]} au fost efectuate {date_an_luna.count(an_luna)} curse."
+            )
 
     def distanta_totala(self):
         """Se va afisa in terminal distanta totala parcursa in km"""
 
         mile_to_km = 1.609344
-        distante = list(self.dataframe['Distance (miles)'])
-        statusuri_curse = list(self.dataframe['Trip or Order Status'])
+        distante = list(self.dataframe["Distance (miles)"])
+        statusuri_curse = list(self.dataframe["Trip or Order Status"])
 
         distante_mile_curse_complete = []
 
         for i in range(len(statusuri_curse)):
-            if statusuri_curse[i] == 'COMPLETED':
+            if statusuri_curse[i] == "COMPLETED":
                 distante_mile_curse_complete.append(float(distante[i]))
 
         distanta_totala_km = sum(distante_mile_curse_complete) * mile_to_km
-        #print(len(distante), len(statusuri_curse),len(distante_mile_curse_complete))
-        print(f'Distanta totala parcursa este de {distanta_totala_km:.2f} km.')
+        print(f"Distanta totala parcursa este de {distanta_totala_km:.2f} km.")
 
     def total_curse_per_produs(self):
         """Va afisa in terminal numarul de curse parcurse cu fiecare tip de serviciu uber"""
-        tip_uber = list(self.dataframe['Product Type'])
-        statusuri_curse = list(self.dataframe['Trip or Order Status'])
+        tip_uber = list(self.dataframe["Product Type"])
+        statusuri_curse = list(self.dataframe["Trip or Order Status"])
 
         curse_complete_tip_uber = []
 
         for i in range(len(statusuri_curse)):
-            if statusuri_curse[i] == 'COMPLETED':
+            if statusuri_curse[i] == "COMPLETED":
                 curse_complete_tip_uber.append(tip_uber[i])
 
-        for tip_uber in (list(set(curse_complete_tip_uber))):
-            print(f'Au fost efectuate {curse_complete_tip_uber.count(tip_uber)} cu {tip_uber}.')
+        for tip_uber in list(set(curse_complete_tip_uber)):
+            print(
+                f"Au fost efectuate {curse_complete_tip_uber.count(tip_uber)} cu {tip_uber}."
+            )
 
     def transforma_in_datetime(self, data_str):
         # stergem '+0000 UTC' si pastram formatul '2024-05-30 14:38:07'
-        data_str = data_str.split(' +')[0]
-        return datetime.strptime(data_str, '%Y-%m-%d %H:%M:%S')
+        data_str = data_str.split(" +")[0]
+        return datetime.strptime(data_str, "%Y-%m-%d %H:%M:%S")
 
     def calculeaza_timp_total(self):
         timp_total = timedelta()
         lst_timpi_trafic = []
 
-        lst_begin_time = list(self.dataframe['Begin Trip Time'])
-        lst_dropoff_time = list(self.dataframe['Dropoff Time'])
+        lst_begin_time = list(self.dataframe["Begin Trip Time"])
+        lst_dropoff_time = list(self.dataframe["Dropoff Time"])
 
-        statusuri_curse = list(self.dataframe['Trip or Order Status'])
+        statusuri_curse = list(self.dataframe["Trip or Order Status"])
 
         for i in range(len(statusuri_curse)):
-            if statusuri_curse[i] == 'COMPLETED':
+            if statusuri_curse[i] == "COMPLETED":
                 begin_time = self.transforma_in_datetime(lst_begin_time[i])
                 dropoff_time = self.transforma_in_datetime(lst_dropoff_time[i])
                 trip_duration = dropoff_time - begin_time
@@ -178,10 +206,12 @@ class Statistica:
         ore, remainder = divmod(total_secunde, 3600)
         minute, seconds = divmod(remainder, 60)
 
-        print(f'Timpul total petrecut in trafic cu Uber este {zile}zile, {ore}ore, {minute}minute, {seconds}secunde')
+        print(
+            f"Timpul total petrecut in trafic cu Uber este {zile}zile, {ore}ore, {minute}minute, {seconds}secunde"
+        )
 
     def convert_to_timedelta(self, duration_str):
-        hours, minutes, seconds = map(int, duration_str.split(':'))
+        hours, minutes, seconds = map(int, duration_str.split(":"))
         return timedelta(hours=hours, minutes=minutes, seconds=seconds)
 
     def timpi_curse(self):
@@ -200,16 +230,17 @@ class Statistica:
         return minutes, seconds
 
     def cea_mai_scurta_cursa(self):
-        # print(min(self.timpi_curse()))
-        print(f'Cea mai scurta cursa a durat {self.format_timedelta(min(self.timpi_curse()))[0]} minute si {self.format_timedelta(min(self.timpi_curse()))[1]} secunde')
-
+        print(
+            f"Cea mai scurta cursa a durat {self.format_timedelta(min(self.timpi_curse()))[0]} minute si {self.format_timedelta(min(self.timpi_curse()))[1]} secunde"
+        )
 
     def cea_mai_lunga_cursa(self):
-        # print(max(self.timpi_curse()))
-        print(f'Cea mai scurta cursa a durat {self.format_timedelta(max(self.timpi_curse()))[0]} minute si {self.format_timedelta(max(self.timpi_curse()))[1]} secunde')
+        print(
+            f"Cea mai scurta cursa a durat {self.format_timedelta(max(self.timpi_curse()))[0]} minute si {self.format_timedelta(max(self.timpi_curse()))[1]} secunde"
+        )
 
 
-if __name__ =='__main__':
+if __name__ == "__main__":
     if len(sys.argv) != 2:
         sys.exit("Trebuie sa specifici un argument")
 
@@ -218,7 +249,7 @@ if __name__ =='__main__':
     df_csv = csv_citit.citeste_csv()
 
     if df_csv is not None:
-        transformare_ron = CurrencyConverter(dataframe=df_csv, val_eur_to_ron=4.9763, val_gbp_to_ron=5.85)
+        transformare_ron = CurrencyConverter(dataframe=df_csv)
         df_csv_ron = transformare_ron.convert_to_ron()
 
         statistici = Statistica(df_csv_ron)
