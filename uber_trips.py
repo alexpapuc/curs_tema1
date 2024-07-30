@@ -3,9 +3,9 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 
-class CSV:
-    def __init__(self):
-        self.file_path = sys.argv[1]
+class CitesteCSV:
+    def __init__(self, file_path):
+        self.file_path = file_path
         self.dataframe = None
 
     def citeste_csv(self):
@@ -33,7 +33,7 @@ class CurrencyConverter:
                 else:
                     return float(linie_df['Fare Amount'])
             except ValueError:
-                print(f'Valoarea {linie_df['Fare Amount']} nu este un numar. Va fi inlocuit cu 0!')
+                print(f"Valoarea {linie_df['Fare Amount']} nu este un numar. Va fi inlocuit cu 0!")
                 return 0
 
         self.dataframe['Fare Amount RON'] = self.dataframe.apply(converteste_in_ron, axis=1)
@@ -114,7 +114,7 @@ class Statistica:
         #sortam lista de tupluri in functie de an si luna
         date_an_luna_unice.sort(key=lambda x: (x[0], x[1]))
         for an_luna in date_an_luna_unice:
-            print(f'In anul{an_luna[0]} luna {an_luna[1]} au fost efectuate {date_an_luna.count(an_luna)} curse.')
+            print(f'In anul {an_luna[0]} luna {an_luna[1]} au fost efectuate {date_an_luna.count(an_luna)} curse.')
 
     def distanta_totala(self):
         """Se va afisa in terminal distanta totala parcursa in km"""
@@ -210,17 +210,18 @@ class Statistica:
 
 
 if __name__ =='__main__':
-    #fisier = 'trips_data.csv'
-    csv_citit = CitesteCSV()
+    if len(sys.argv) != 2:
+        sys.exit("Trebuie sa specifici un argument")
+
+    file_path = sys.argv[1]
+    csv_citit = CitesteCSV(file_path)
     df_csv = csv_citit.citeste_csv()
-    print(df_csv)
 
     if df_csv is not None:
         transformare_ron = CurrencyConverter(dataframe=df_csv, val_eur_to_ron=4.9763, val_gbp_to_ron=5.85)
         df_csv_ron = transformare_ron.convert_to_ron()
 
         statistici = Statistica(df_csv_ron)
-        #statistici.afiseaza_coloane()
         statistici.total_bani_cheltuiti()
         statistici.total_curse()
         statistici.total_curse_pe_an()
